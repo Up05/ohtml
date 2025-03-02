@@ -13,9 +13,14 @@ You can use the cmd library with curl, or laytan's http 1.1 implementation, or w
 As a great man once said:  
 > Once the rockets are up, who cares where they come down? That's not my department!
 
+# How to get
+```sh
+git clone "https://github.com/Up05/ohtml" ohtml
+```
+
 # Example usage
 
-```
+```odin
 import ohtml
 import "core:fmt"
 
@@ -54,7 +59,7 @@ format :: proc(element: ^Element) {
 # Types
 
 The main type:
-```
+```odin
 Element :: struct {
     type:       string,                 // This is just the tag name
     text:       [dynamic] string,       // All text from all direct children (TODO maybe not how it works?)
@@ -66,18 +71,18 @@ Element :: struct {
 ```
 
 There are often lists of elements:
-```
+```odin
 Elements :: [dynamic] ^Element
 ```
 
 And when iterating over ALL children of an element:
-```
+```odin
 TextOrElement :: union { ^Element, string }
 ```
 
 # Functions
 
-```
+```odin
 // parses the html string, in theory, cannot fail
 parse :: proc(html: string, intermediate_allocator := context.temp_allocator) -> ^Element
 
@@ -86,10 +91,10 @@ inner_html :: proc(elem: ^Element) -> string    // Gets all of the html between 
 get_next_sibling :: proc(elem: ^Element, offset := 1) -> ^Element // You can guess (might not work with negative numbers, dunno)   
 by_id :: proc(start: ^Element, id: string) -> ^Element // Gets a single(first) element by it's id attribute (case-sensitive)
 by_attr :: proc(start: ^Element, key: string, value: string) -> Elements // boolean attributes are "true" btw, so <!DOCTYPE html> == <!DOCTYPE html=true> (case-sensitive)
-by_class :: proc(start: ^Element, class: string) -> Elements -> All elements by class (case-sensitive)
-by_tag :: proc(start: ^Element, tag: string) -> Elements All elements by tag name (case-sensitive)
-has_attr :: proc(elem: ^Element, name: string) -> bool (equivalent to: `attribute in element.attrs`)
-get_attr :: proc(elem: ^Element, name: string) -> string (equivalent to: `element.attrs[attribute]`)
+by_class :: proc(start: ^Element, class: string) -> Elements // All elements by class (case-sensitive)
+by_tag :: proc(start: ^Element, tag: string) -> Elements // All elements by tag name (case-sensitive)
+has_attr :: proc(elem: ^Element, name: string) -> bool // (equivalent to: `attribute in element.attrs`)
+get_attr :: proc(elem: ^Element, name: string) -> string // (equivalent to: `element.attrs[attribute]`)
 for_all_children :: proc(elem: ^Element, callback: proc(item: TextOrElement, respective_index: int))
 ```
 
