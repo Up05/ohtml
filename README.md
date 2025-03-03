@@ -4,7 +4,7 @@ I couldn't find an HTML spec, so I don't know if this is spec compliant or not Â
 
 But I tried to allow for:
 1. utf-8
-2. tag omitting
+2. tag omitting (nevermind, somewhat)
 3. self-closing
 4. dom querrying
 
@@ -12,6 +12,11 @@ Although this library does not provide a way to fetch html.
 You can use the cmd library with curl, or laytan's http 1.1 implementation, or whatever else.
 As a great man once said:  
 > Once the rockets are up, who cares where they come down? That's not my department!
+
+# Important TODO
+
+Over the next weekend, I will, probably, fix tag omission. I hopere there weren't special rules
+for different elements, [but, that's not the case](https://html.spec.whatwg.org/multipage/parsing.html#the-stack-of-open-elements)
 
 # How to get
 ```sh
