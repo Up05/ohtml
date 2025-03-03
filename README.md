@@ -2,7 +2,7 @@
 
 I couldn't find an HTML spec, so I don't know if this is spec compliant or not ¯\\\_(ツ)\_/¯
 
-There are probably bugs, but I tried to allow for:
+But I tried to allow for:
 1. utf-8
 2. tag omitting
 3. self-closing
