@@ -13,10 +13,30 @@ You can use the cmd library with curl, or laytan's http 1.1 implementation, or w
 As a great man once said:  
 > Once the rockets are up, who cares where they come down? That's not my department!
 
-# Important TODO
+# How tag omission works right now:
 
-Over the next weekend, I will, probably, fix tag omission. I hopere there weren't special rules
-for different elements, [but, that's not the case](https://html.spec.whatwg.org/multipage/parsing.html#the-stack-of-open-elements)
+[I hoped the parser didn't need to know element names](https://html.spec.whatwg.org/multipage/parsing.html#the-stack-of-open-elements)
+So when a tag was omitted, I just simply thought of it was self closing, like:
+```html
+<i> one
+<b> two </b>
+```
+Would translate into:
+```html
+root
+ ↳ <i>
+ ↳ one
+ ↳ <b>
+    ↳ two
+```
+When it should be (I think, because `<b>` should be nestable)
+```html
+root
+ ↳ <i>
+    ↳ one
+    ↳ <b>
+       ↳ two 
+```
 
 # How to get
 ```sh
