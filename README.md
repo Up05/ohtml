@@ -8,7 +8,8 @@ There are probably bugs, but I tried to allow for:
 4. dom querrying (by\_id, by\_tag, ...)
 
 As a great man once said:  
-> Once the rockets are up, who cares where they come down? That's not my department!  
+> Once the rockets are up, who cares where they come down? That's not my department!
+ 
 So getting the html is not provided here, although I can recommend [Laytan's http 1.1 implementation](https://github.com/laytan/odin-http) or just running curl through a system command (there is a command library).
 
 # Install
