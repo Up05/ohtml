@@ -11,10 +11,15 @@ As a great man once said:
 > Once the rockets are up, who cares where they come down? That's not my department!  
 So getting the html is not provided here, although I can recommend [Laytan's http 1.1 implementation](https://github.com/laytan/odin-http) or just running curl through a system command (there is a command library).
 
+# Install
+```sh
+git clone "https://github.com/Up05/ohtml" ohtml
+odin run . # or whatever
+```
 
 # Example usage
 
-```
+```odin
 import ohtml
 import "core:fmt"
 
@@ -53,10 +58,10 @@ format :: proc(element: ^Element) {
 # Types
 
 The main type:
-```
+```odin
 Element :: struct {
     type:       string,                 // This is just the tag name
-    text:       [dynamic] string,       // All text from all direct children (TODO maybe not how it works?)
+    text:       [dynamic] string,       // All text from all direct children
     attrs:      map [string] string,    // Attribute map, key = value, attrs[key] == value
     parent:     ^Element,               // The parent element (can be nil, obviously)
     children:   [dynamic] ^Element,     // All children elements...
@@ -65,31 +70,31 @@ Element :: struct {
 ```
 
 It's common to have lists of elements:
-```
+```odin
 Elements :: [dynamic] ^Element
 ```
 
 And when iterating over ALL children of an element:
-```
+```odin
 TextOrElement :: union { ^Element, string }
 ```
 
 # Functions
 
-```
+```odin
 // parses the html string, in theory, cannot fail
 parse :: proc(html: string, intermediate_allocator := context.temp_allocator) -> ^Element
 
 inner_text :: proc(elem: ^Element) -> string    // Gets the inner text of an element and all its children (only the text)
 inner_html :: proc(elem: ^Element) -> string    // Gets all of the html between <E...> and </E> of the element (slices original string)
 get_next_sibling :: proc(elem: ^Element, offset := 1) -> ^Element // You can guess (might not work with negative numbers, dunno)   
-by_id :: proc(start: ^Element, id: string) -> ^Element // Gets a single(first) element by it's id attribute (case-sensitive)
-by_attr :: proc(start: ^Element, key: string, value: string) -> Elements // boolean attributes are "true" btw, so <!DOCTYPE html> == <!DOCTYPE html=true> (case-sensitive)
-by_class :: proc(start: ^Element, class: string) -> Elements -> All elements by class (case-sensitive)
-by_tag :: proc(start: ^Element, tag: string) -> Elements All elements by tag name (case-sensitive)
+by_id :: proc(start: ^Element, id: string) -> ^Element // Gets a single(first) element by it's id attribute
+by_attr :: proc(start: ^Element, key: string, value: string) -> Elements // boolean attributes are "true" btw, so <!DOCTYPE html> == <!DOCTYPE html=true>
+by_class :: proc(start: ^Element, class: string) -> Elements -> // All elements by class
+by_tag :: proc(start: ^Element, tag: string) -> Elements // All elements by tag name
 has_attr :: proc(elem: ^Element, name: string) -> bool (equivalent to: `attribute in element.attrs`)
 get_attr :: proc(elem: ^Element, name: string) -> string (equivalent to: `element.attrs[attribute]`)
-for_all_children :: proc(elem: ^Element, callback: proc(item: TextOrElement, respective_index: int))
+for_all_children :: proc(elem: ^Element, callback: proc(item: TextOrElement, respective_index: int)) // loop through combined, in order Element & Text "array"
 ```
 
 # TODO (will never get done)
