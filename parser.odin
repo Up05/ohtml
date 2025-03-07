@@ -4,7 +4,7 @@ import bits "core:container/bit_array"
 
 Element :: struct {
     type:       string,                 // This is just the tag name
-    text:       [dynamic] string,       // All text from all direct children (TODO maybe not how it works?)
+    text:       [dynamic] string,       // All text from all direct children
     attrs:      map [string] string,    // Attribute map, key = value, attrs[key] == value
     parent:     ^Element,               // The parent element (can be nil, obviously)
     children:   [dynamic] ^Element,     // All children elements...
@@ -59,13 +59,46 @@ parse :: proc(html: string, intermediate_allocator := context.temp_allocator) ->
     return elem
 }
 
-parse_elem :: proc(pre := false) -> ^Element {
+// TODO: hashset MAY be faster (since, I can fast hash str -> i32)
+
+// Void tags should not have any children or closing tags
+VOID_TAGS : [] string : { 
+    "meta", "link", "base", "frame", "img", "br", "wbr", "embed", "hr", "input", "keygen", "col", "command",
+    "device", "area", "basefont", "bgsound", "menuitem", "param", "source", "track"
+}
+
+// An inline element should not contain a block level element
+INLINE_TAGS : [] string : {
+    "object", "base", "font", "tt", "i", "b", "u", "big", "small", "em", "strong", "dfn", "code", "samp", "kbd",
+    "var", "cite", "abbr", "time", "acronym", "mark", "ruby", "rt", "rp", "rtc", "a", "img", "br", "wbr", "map", "q",
+    "sub", "sup", "bdo", "iframe", "embed", "span", "input", "select", "textarea", "label", "optgroup",
+    "option", "legend", "datalist", "keygen", "output", "progress", "meter", "area", "param", "source", "track",
+    "summary", "command", "device", "area", "basefont", "bgsound", "menuitem", "param", "source", "track",
+    "data", "bdi", "s", "strike", "nobr",
+    "rb", // deprecated but still known / special handling
+    "text", // in SVG NS
+    "mi", "mo", "msup", "mn", "mtext"
+}
+BLOCK_TAGS : [] string : {
+    "html", "head", "body", "frameset", "script", "noscript", "style", "meta", "link", "title", "frame",
+    "noframes", "section", "nav", "aside", "hgroup", "header", "footer", "p", "h1", "h2", "h3", "h4", "h5", "h6",
+    "ul", "ol", "pre", "div", "blockquote", "hr", "address", "figure", "figcaption", "form", "fieldset", "ins",
+    "del", "dl", "dt", "dd", "li", "table", "caption", "thead", "tfoot", "tbody", "colgroup", "col", "tr", "th",
+    "td", "video", "audio", "canvas", "details", "menu", "plaintext", "template", "article", "main",
+    "svg", "math", "center", "template",
+    "dir", "applet", "marquee", "listing"
+}
+
+KEEP_WHITESPACE : [] string : { "pre", "plaintext", "title", "textarea" }
+
+parse_elem :: proc(pre := false) -> ^Element {//{{{
     if peek().type != .ELEMENT do return nil
     
     elem := new(Element)
     elem.type = next().text
 
-    pre := pre || elem.type == "pre"
+    pre := pre || any_of(elem.type, ..KEEP_WHITESPACE)
+    is_inline := any_of(elem.type, ..INLINE_TAGS)
 
     for current < len(tokens) {
         #partial switch peek().type {
@@ -79,34 +112,48 @@ parse_elem :: proc(pre := false) -> ^Element {
         case .TAG_END:
             next()
 
-            if !is_closed(elem.type) {
-                return elem // I think, that this is how tag omission works, kind of anyways?    
+            if any_of(elem.type, ..VOID_TAGS) {
+                return elem
             }
 
-            for current < len(tokens) {
-
-                if peek().type == .TEXT {
+            has_closing_tag := is_closed(elem.type)
+            inner_for: for current < len(tokens) {
+                
+                switch {
+                case peek().type == .TEXT:
                     append(&elem.text, peek().text)
                     bits.set(&elem.ordering, bits.len(&elem.ordering))
                     next()
 
-                } else if peek().type == .ELEMENT {
+                case peek().type == .ELEMENT:
+                    if any_of(peek().text, ..BLOCK_TAGS) {
+                        if !has_closing_tag && eq(peek().text, elem.type) do return elem
+                        if is_inline do return elem
+                    }
+                    
                     child := parse_elem(pre)
                     if child == nil do continue
                     append(&elem.children, child)
                     child.parent = elem
                     bits.set(&elem.ordering, bits.len(&elem.ordering), false)
                     
-                } else if peek().type == .WHITESPACE {
+                case peek().type == .WHITESPACE:
                     txt := peek().text if pre else trim_ws(peek().text)
                     append(&elem.text, peek().text)
                     bits.set(&elem.ordering, bits.len(&elem.ordering), true)
                     next()
 
-                } else do break
+                case peek().type == .ELEMENT_END && ends_with(peek().text, elem.type):
+                    return elem
+
+                case:
+                    if peek().type == .ELEMENT_END do next()  
+                    else do break inner_for
+                }
             }
         case .ELEMENT_END:
-            if !ends_with(next().text, elem.type) do break
+            if !ends_with(peek().text, elem.type) && peek().text != "/" do break
+            if peek().type == .ELEMENT_END do next()
             if peek().type == .TAG_END do next()
             return elem
 
@@ -115,13 +162,13 @@ parse_elem :: proc(pre := false) -> ^Element {
     } // for 
 
     return elem
-}
+}//}}}
 
 // obviously, there can be <br> anywhere...
-is_closed :: proc(tag: string) -> bool {
+is_closed :: proc(tag: string) -> bool {//{{{
     level := 0
     for t in tokens[current:] {
-        if t.type == .ELEMENT && t.text == tag {
+        if t.type == .ELEMENT && eq(t.text, tag) {
            level += 1
         } else if t.type == .ELEMENT_END && ends_with(t.text, tag) {
             if level <= 0 do return true
@@ -129,9 +176,41 @@ is_closed :: proc(tag: string) -> bool {
         }
     }
     return false
-}
+}//}}}
 
-// super quick and dirty printer, mostly for debugging 
+
+dbg_fmt_tags :: proc(element: ^Element, level := 0) -> string {//{{{
+    I := "    "
+    result: [dynamic] u8
+
+    fmt_attr :: proc(result: ^[dynamic] u8, value: string) {
+        append_elems(result, u8(' '), u8('['))
+        append_elems(result, .. transmute([]u8) value)
+        append_elems(result, u8(']'), u8(' '))
+    }
+
+    for child in element.children {
+        for i in 0..<level do append_elems(&result, .. transmute([]u8) I)
+        append_elems(&result, .. transmute([]u8) child.type)
+        if "id" in child.attrs {
+            fmt_attr(&result, child.attrs["id"])
+        } else if "name" in child.attrs {
+            fmt_attr(&result, child.attrs["name"])
+        } else if "rel" in child.attrs {
+            fmt_attr(&result, child.attrs["rel"])
+        } else if "title" in child.attrs {
+            fmt_attr(&result, child.attrs["title"])
+        } else {
+            append_elems(&result, u8(' '), u8('['), u8(']'), u8(' '))
+        }
+        append_elems(&result, u8('\n'))
+        append_elems(&result, .. transmute([]u8) dbg_fmt_tags(child, level + 1)) 
+    }
+    
+    return string(result[:])
+}//}}}
+
+// super quick and dirty printer, mostly for debugging {{{
 // print_parser :: proc(element: ^Element, level := 0) {
 //     I := "                                                                                                                                "
 //     print :: proc(strs: ..string, end := "\n") {
@@ -158,7 +237,4 @@ is_closed :: proc(tag: string) -> bool {
 //         }
 //     }
 //     print(I[:level], "</", element.type, ">\n")
-// }
-
-
-
+// }}}}

@@ -1,11 +1,25 @@
 package ohtml
 
+// a.k.a. _eq_leftover
+eq :: proc(a, b: string) -> bool {
+    if len(a) != len(b) do return false
+    #no_bounds_check for i in 0..<len(a) {
+        r1 := a[i]
+        r2 := b[i]
+
+        A := r1 - 32*u8(r1 >= 'a' && r1 <= 'z')
+        B := r2 - 32*u8(r2 >= 'a' && r2 <= 'z')
+        if A != B do return false
+    }
+    return true
+}
+
 starts_with :: proc(a, b: string) -> bool {
-    return len(a) >= len(b) && a[:len(b)] == b
+    return len(a) >= len(b) && eq(a[:len(b)], b)
 }
 
 ends_with :: proc(a, b: string) -> bool {
-    return len(a) >= len(b) && a[len(a) - len(b):] == b
+    return len(a) >= len(b) && eq(a[len(a) - len(b):], b)
 }
 
 index_str :: proc(haystack: string, needle: string, offset := 0) -> (int, int) {
@@ -43,9 +57,18 @@ first_rune :: proc(s: string) -> rune {
     panic("string is empty, cannot get first rune!")
 }
 
-any_of :: proc(a: $T, bees: ..T) -> bool {
+any_of_any :: proc(a: $T, bees: ..T) -> bool {
     for b in bees do if a == b do return true
     return false
+}
+
+any_of_str :: proc(a: string, strs: ..string) -> bool {
+    for b in strs do if eq(a, b) do return true
+    return false
+}
+
+any_of :: proc {
+    any_of_str, any_of_any
 }
 
 range :: proc(a, lo, hi: $T) -> bool {
@@ -103,4 +126,36 @@ last :: proc(array: [dynamic] $T) -> ^T {
     return &array[len(array) - 1]
 }
 
-
+// If anyone wants it:
+// The speed is, basically, the same with 8/16/32 widths
+// but it crashes with bad aignment and my strings will be short
+// so eating the leftovers from both ends makes no sense
+// eq :: proc(a, b: string) -> bool {
+//     using simd
+//     a, b := transmute([] u8) a, transmute([] u8) b
+//     if len(a) != len(b) do return false
+// 
+//     W :: 32 // lanes or width
+//     l := len(a) - len(a) % W
+// 
+//     LO   : #simd [W] u8; LO = auto_cast 'a' 
+//     HI   : #simd [W] u8; HI = auto_cast 'z'
+//     MUL  : #simd [W] u8; MUL = auto_cast 32
+//     BOOL : #simd [W] u8; BOOL = auto_cast 1
+// 
+//     i: int
+//     #no_bounds_check for ; i < l; i += W {
+//         // _1 := from_slice(#simd [W] u8, transmute([]u8) a[i:i+W]) 
+//         // _2 := from_slice(#simd [W] u8, transmute([]u8) b[i:i+W]) 
+//         _1 := (cast(^#simd [W] u8)(&a[i+8]))^
+//         _2 := (cast(^#simd [W] u8)(&b[i+8]))^
+//         A := sub(_1, mul(MUL, bit_and(bit_and( lanes_ge(_1, LO), lanes_ge(_1, HI) ), BOOL) ))
+//         B := sub(_2, mul(MUL, bit_and(bit_and( lanes_ge(_2, LO), lanes_ge(_2, HI) ), BOOL) ))
+//         if reduce_and( lanes_eq(A, B) ) == 0 do return false
+// 
+//         // A := r1 - 32*u8(r1 >= HI && r1 <= HI)
+//         // B := r2 - 32*u8(r2 >= HI && r2 <= HI)
+//         // if A != B do return false
+//     }
+//     return _eq_leftover(string(a[i:]), string(b[i:]))
+// }

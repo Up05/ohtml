@@ -17,7 +17,6 @@ Token :: struct {
     type: TokenType
 }
 
-
 lex :: proc(raw_tokens: [] string, alloc := context.temp_allocator) -> [] Token {
     tokens := make_dynamic_array_len_cap([dynamic] Token, 0, len(raw_tokens), alloc)
 
@@ -41,6 +40,18 @@ lex :: proc(raw_tokens: [] string, alloc := context.temp_allocator) -> [] Token 
                 i += 1
                 break
             }
+            if ends_with(curr, "/") {
+                if len(curr) == 1 {
+                    append(&tokens, T(curr, .ELEMENT_END))
+                    break
+                } else {
+                    append(&tokens, T(curr[:len(curr) - 1], .ELEMENT))
+                    append(&tokens, T(curr[len(curr) - 1:], .ELEMENT_END))
+                    break
+                }
+            
+            }
+
             append(&tokens, T(curr, .ELEMENT))
         case curr == ">":         
             append(&tokens, T(curr, .TAG_END))

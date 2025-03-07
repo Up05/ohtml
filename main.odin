@@ -95,7 +95,7 @@ by_class :: proc(start: ^Element, class: string) -> Elements {
 by_tag :: proc(start: ^Element, tag: string) -> Elements {
     buffer: Elements
     for child in start.children {
-        if child.type == tag do append_elem(&buffer, child) 
+        if eq(child.type, tag) do append_elem(&buffer, child) 
         cb := by_tag(child, tag) // child buffer
         append_elems(&buffer, ..cb[:])
         delete(cb)
