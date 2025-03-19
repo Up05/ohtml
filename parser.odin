@@ -28,8 +28,12 @@ peek :: proc(o := 0) -> Token {
 }
 
 parse :: proc(html: string, intermediate_allocator := context.temp_allocator) -> ^Element {
+    tokens = {}
+    current = 0
+
     raw_tokens := tokenize(html, intermediate_allocator)
     lexed_tokens := lex(raw_tokens, intermediate_allocator)
+    
     defer free_all(intermediate_allocator)
 
     tokens = lexed_tokens
@@ -40,7 +44,7 @@ parse :: proc(html: string, intermediate_allocator := context.temp_allocator) ->
     for current < len(tokens) {
         if peek().type == .TEXT {
             append(&elem.text, peek().text)
-            bits.set(&elem.ordering, bits.len(&elem.ordering), true)
+            bits.set(&elem.ordering, len(elem.ordering.bits), true)
             next()
 
         } else if peek().type == .ELEMENT {
@@ -48,14 +52,13 @@ parse :: proc(html: string, intermediate_allocator := context.temp_allocator) ->
             if child == nil do continue
             append(&elem.children, child)
             child.parent = elem
-            bits.set(&elem.ordering, bits.len(&elem.ordering), false)
+            bits.set(&elem.ordering, len(elem.ordering.bits), false)
 
         } else if peek().type == .WHITESPACE {
             next()
 
         } else do break
     }
-    
     return elem
 }
 
@@ -103,10 +106,11 @@ parse_elem :: proc(pre := false) -> ^Element {//{{{
     for current < len(tokens) {
         #partial switch peek().type {
         case .A_KEY:
+            key := to_lower_copy(peek().text) // TODO, This sucks ass.
             if peek(1).type == .A_VALUE {
-                elem.attrs[peek().text] = next(1).text
+                elem.attrs[key] = next(1).text
             } else {
-                elem.attrs[peek().text] = "true"
+                elem.attrs[key] = "true"
                 next()
             }
         case .TAG_END:
@@ -122,7 +126,7 @@ parse_elem :: proc(pre := false) -> ^Element {//{{{
                 switch {
                 case peek().type == .TEXT:
                     append(&elem.text, peek().text)
-                    bits.set(&elem.ordering, bits.len(&elem.ordering))
+                    bits.set(&elem.ordering, len(elem.ordering.bits))
                     next()
 
                 case peek().type == .ELEMENT:
@@ -135,12 +139,12 @@ parse_elem :: proc(pre := false) -> ^Element {//{{{
                     if child == nil do continue
                     append(&elem.children, child)
                     child.parent = elem
-                    bits.set(&elem.ordering, bits.len(&elem.ordering), false)
+                    bits.set(&elem.ordering, len(elem.ordering.bits), false)
                     
                 case peek().type == .WHITESPACE:
                     txt := peek().text if pre else trim_ws(peek().text)
                     append(&elem.text, peek().text)
-                    bits.set(&elem.ordering, bits.len(&elem.ordering), true)
+                    bits.set(&elem.ordering, len(elem.ordering.bits), true)
                     next()
 
                 case peek().type == .ELEMENT_END && ends_with(peek().text, elem.type):

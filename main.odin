@@ -17,7 +17,7 @@ inner_text :: proc(elem: ^Element) -> string {
         if is_text {
             append_elems(&result, .. transmute([]u8)elem.text[text])
             text += 1
-        } else {
+        } else if child < len(elem.children) {
             the_text := inner_text(elem.children[child]) 
             append_elems(&result, .. transmute([]u8)the_text)
             child += 1
@@ -36,7 +36,7 @@ inner_html :: proc(elem: ^Element) -> string {
 
     // yeah, should have left this as is, cba by now
     get_last_text :: proc(elem: ^Element) -> string {
-        is_last_text := bits.get(&elem.ordering, bits.len(&elem.ordering) - 1)
+        is_last_text := bits.get(&elem.ordering, len(elem.ordering.bits) - 1)
              if is_last_text do             return last(elem.text)^
         else if len(elem.children) > 0 do   return get_last_text(last(elem.children)^)
         if len(elem.text) > 0 do            return elem.text[0]

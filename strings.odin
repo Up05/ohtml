@@ -1,5 +1,16 @@
 package ohtml
 
+to_lower_copy :: proc(s: string) -> string {
+    new_str := make_slice([] u8, len(s))
+    #no_bounds_check for i in 0..<len(s) {
+        r := s[i]
+        new_str[i] = r + 32*u8(r >= 'A' && r <= 'Z')
+    }
+    return string(new_str)
+}
+
+
+
 // a.k.a. _eq_leftover
 eq :: proc(a, b: string) -> bool {
     if len(a) != len(b) do return false
