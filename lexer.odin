@@ -74,9 +74,7 @@ lex :: proc(raw_tokens: [] string, alloc := context.temp_allocator) -> [] Token 
             if is_all_ws { append(&tokens, T(curr, .WHITESPACE)) }
             else { append(&tokens, T(curr, .TEXT)) }
         }
-
     }
-
 
     return tokens[:]
 }

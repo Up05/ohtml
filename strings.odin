@@ -9,8 +9,6 @@ to_lower_copy :: proc(s: string) -> string {
     return string(new_str)
 }
 
-
-
 // a.k.a. _eq_leftover
 eq :: proc(a, b: string) -> bool {
     if len(a) != len(b) { return false }
