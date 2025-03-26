@@ -37,10 +37,10 @@ inner_html :: proc(elem: ^Element) -> string {
     // yeah, should have left this as is, cba by now
     get_last_text :: proc(elem: ^Element) -> string {
         is_last_text := bits.get(&elem.ordering, len(elem.ordering.bits) - 1)
-             if is_last_text {             return last(elem.text)^ }
-        else if len(elem.children) > 0 {   return get_last_text(last(elem.children)^) }
-        if len(elem.text) > 0 {            return elem.text[0] }
-                                            return last(elem.parent.text)^
+             if is_last_text {           return last(elem.text)^ }
+        else if len(elem.children) > 0 { return get_last_text(last(elem.children)^) }
+        if len(elem.text) > 0 {          return elem.text[0] }
+                                         return last(elem.parent.text)^
     }
 
     if len(elem.text) == 0 { return "" }
@@ -119,6 +119,6 @@ for_all_children :: proc(elem: ^Element, callback: proc(item: TextOrElement, res
         if !ok { break }
 
         if is_text { callback(elem.text[text], text) }
-        else {       callback(elem.children[child], child) }
+        else       { callback(elem.children[child], child) }
     }
 }
