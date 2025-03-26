@@ -15,15 +15,15 @@ Element :: struct {
 @(private="file") current: int
 
 @(private="file")
-next :: proc(o := 0) -> Token { 
+next :: proc(o := 0) -> Token {
     defer current += 1 + o
-    if current + o < len(tokens) do return tokens[current + o]
+    if current + o < len(tokens) { return tokens[current + o] }
     return { }
 }
 
 @(private="file")
 peek :: proc(o := 0) -> Token {
-    if current + o < len(tokens) do return tokens[current + o] 
+    if current + o < len(tokens) { return tokens[current + o]  }
     return { }
 }
 
@@ -33,7 +33,7 @@ parse :: proc(html: string, intermediate_allocator := context.temp_allocator) ->
 
     raw_tokens := tokenize(html, intermediate_allocator)
     lexed_tokens := lex(raw_tokens, intermediate_allocator)
-    
+
     defer free_all(intermediate_allocator)
 
     tokens = lexed_tokens
@@ -49,7 +49,7 @@ parse :: proc(html: string, intermediate_allocator := context.temp_allocator) ->
 
         } else if peek().type == .ELEMENT {
             child := parse_elem()
-            if child == nil do continue
+            if child == nil { continue }
             append(&elem.children, child)
             child.parent = elem
             bits.set(&elem.ordering, len(elem.ordering.bits), false)
@@ -57,7 +57,7 @@ parse :: proc(html: string, intermediate_allocator := context.temp_allocator) ->
         } else if peek().type == .WHITESPACE {
             next()
 
-        } else do break
+        } else { break }
     }
     return elem
 }
@@ -65,9 +65,9 @@ parse :: proc(html: string, intermediate_allocator := context.temp_allocator) ->
 // TODO: hashset MAY be faster (since, I can fast hash str -> i32)
 
 // Void tags should not have any children or closing tags
-VOID_TAGS : [] string : { 
+VOID_TAGS : [] string : {
     "meta", "link", "base", "frame", "img", "br", "wbr", "embed", "hr", "input", "keygen", "col", "command",
-    "device", "area", "basefont", "bgsound", "menuitem", "param", "source", "track"
+    "device", "area", "basefont", "bgsound", "menuitem", "param", "source", "track",
 }
 
 // An inline element should not contain a block level element
@@ -80,7 +80,7 @@ INLINE_TAGS : [] string : {
     "data", "bdi", "s", "strike", "nobr",
     "rb", // deprecated but still known / special handling
     "text", // in SVG NS
-    "mi", "mo", "msup", "mn", "mtext"
+    "mi", "mo", "msup", "mn", "mtext",
 }
 BLOCK_TAGS : [] string : {
     "html", "head", "body", "frameset", "script", "noscript", "style", "meta", "link", "title", "frame",
@@ -89,14 +89,14 @@ BLOCK_TAGS : [] string : {
     "del", "dl", "dt", "dd", "li", "table", "caption", "thead", "tfoot", "tbody", "colgroup", "col", "tr", "th",
     "td", "video", "audio", "canvas", "details", "menu", "plaintext", "template", "article", "main",
     "svg", "math", "center", "template",
-    "dir", "applet", "marquee", "listing"
+    "dir", "applet", "marquee", "listing",
 }
 
 KEEP_WHITESPACE : [] string : { "pre", "plaintext", "title", "textarea" }
 
 parse_elem :: proc(pre := false) -> ^Element {//{{{
-    if peek().type != .ELEMENT do return nil
-    
+    if peek().type != .ELEMENT { return nil }
+
     elem := new(Element)
     elem.type = next().text
 
@@ -122,7 +122,7 @@ parse_elem :: proc(pre := false) -> ^Element {//{{{
 
             has_closing_tag := is_closed(elem.type)
             inner_for: for current < len(tokens) {
-                
+
                 switch {
                 case peek().type == .TEXT:
                     append(&elem.text, peek().text)
@@ -131,16 +131,16 @@ parse_elem :: proc(pre := false) -> ^Element {//{{{
 
                 case peek().type == .ELEMENT:
                     if any_of(peek().text, ..BLOCK_TAGS) {
-                        if !has_closing_tag && eq(peek().text, elem.type) do return elem
-                        if is_inline do return elem
+                        if !has_closing_tag && eq(peek().text, elem.type) { return elem }
+                        if is_inline { return elem }
                     }
-                    
+
                     child := parse_elem(pre)
-                    if child == nil do continue
+                    if child == nil { continue }
                     append(&elem.children, child)
                     child.parent = elem
                     bits.set(&elem.ordering, len(elem.ordering.bits), false)
-                    
+
                 case peek().type == .WHITESPACE:
                     txt := peek().text if pre else trim_ws(peek().text)
                     append(&elem.text, peek().text)
@@ -151,19 +151,19 @@ parse_elem :: proc(pre := false) -> ^Element {//{{{
                     return elem
 
                 case:
-                    if peek().type == .ELEMENT_END do next()  
-                    else do break inner_for
+                    if peek().type == .ELEMENT_END { next()   }
+                    else { break inner_for }
                 }
             }
         case .ELEMENT_END:
-            if !ends_with(peek().text, elem.type) && peek().text != "/" do break
-            if peek().type == .ELEMENT_END do next()
-            if peek().type == .TAG_END do next()
+            if !ends_with(peek().text, elem.type) && peek().text != "/" { break }
+            if peek().type == .ELEMENT_END { next() }
+            if peek().type == .TAG_END { next() }
             return elem
 
         case: current += 1
-        } // switch  
-    } // for 
+        } // switch
+    } // for
 
     return elem
 }//}}}
@@ -175,7 +175,7 @@ is_closed :: proc(tag: string) -> bool {//{{{
         if t.type == .ELEMENT && eq(t.text, tag) {
            level += 1
         } else if t.type == .ELEMENT_END && ends_with(t.text, tag) {
-            if level <= 0 do return true
+            if level <= 0 { return true }
             level -= 1
         }
     }
@@ -194,7 +194,7 @@ dbg_fmt_tags :: proc(element: ^Element, level := 0) -> string {//{{{
     }
 
     for child in element.children {
-        for i in 0..<level do append_elems(&result, .. transmute([]u8) I)
+        for i in 0..<level { append_elems(&result, .. transmute([]u8) I) }
         append_elems(&result, .. transmute([]u8) child.type)
         if "id" in child.attrs {
             fmt_attr(&result, child.attrs["id"])
@@ -208,9 +208,9 @@ dbg_fmt_tags :: proc(element: ^Element, level := 0) -> string {//{{{
             append_elems(&result, u8(' '), u8('['), u8(']'), u8(' '))
         }
         append_elems(&result, u8('\n'))
-        append_elems(&result, .. transmute([]u8) dbg_fmt_tags(child, level + 1)) 
+        append_elems(&result, .. transmute([]u8) dbg_fmt_tags(child, level + 1))
     }
-    
+
     return string(result[:])
 }//}}}
 
@@ -236,7 +236,7 @@ dbg_fmt_tags :: proc(element: ^Element, level := 0) -> string {//{{{
 //             pstr(element.text[text])
 //             text += 1
 //         } else {
-//             print_parser(element.children[child], level + 2 if element.type != "pre" else 0) 
+//             print_parser(element.children[child], level + 2 if element.type != "pre" else 0)
 //             child += 1
 //         }
 //     }

@@ -12,13 +12,13 @@ inner_text :: proc(elem: ^Element) -> string {
     iter := bits.make_iterator(&elem.ordering)
     for {
         is_text, index, ok := bits.iterate_by_all(&iter)
-        if !ok do break
+        if !ok { break }
 
         if is_text {
             append_elems(&result, .. transmute([]u8)elem.text[text])
             text += 1
         } else if child < len(elem.children) {
-            the_text := inner_text(elem.children[child]) 
+            the_text := inner_text(elem.children[child])
             append_elems(&result, .. transmute([]u8)the_text)
             child += 1
         }
@@ -37,13 +37,13 @@ inner_html :: proc(elem: ^Element) -> string {
     // yeah, should have left this as is, cba by now
     get_last_text :: proc(elem: ^Element) -> string {
         is_last_text := bits.get(&elem.ordering, len(elem.ordering.bits) - 1)
-             if is_last_text do             return last(elem.text)^
-        else if len(elem.children) > 0 do   return get_last_text(last(elem.children)^)
-        if len(elem.text) > 0 do            return elem.text[0]
+             if is_last_text {             return last(elem.text)^ }
+        else if len(elem.children) > 0 {   return get_last_text(last(elem.children)^) }
+        if len(elem.text) > 0 {            return elem.text[0] }
                                             return last(elem.parent.text)^
     }
 
-    if len(elem.text) == 0 do return ""
+    if len(elem.text) == 0 { return "" }
     from := raw_data(elem.text[0])
     l: u64
 
@@ -56,11 +56,11 @@ inner_html :: proc(elem: ^Element) -> string {
 
 
 get_next_sibling :: proc(elem: ^Element, offset := 1) -> ^Element {
-    if elem.parent == nil do return nil
+    if elem.parent == nil { return nil }
 
     for siblings, i in elem.parent.children {
-        if elem != siblings do continue
-        if !( i + offset < len(elem.parent.children) ) do continue
+        if elem != siblings { continue }
+        if !( i + offset < len(elem.parent.children) ) { continue }
         return elem.parent.children[i + offset]
     }
 
@@ -70,9 +70,9 @@ get_next_sibling :: proc(elem: ^Element, offset := 1) -> ^Element {
 
 by_id :: proc(start: ^Element, id: string) -> ^Element {
     for child in start.children {
-        if child.attrs["id"] == id do return child
+        if child.attrs["id"] == id { return child }
         e := by_id(child, id)
-        if e != nil do return e
+        if e != nil { return e }
     }
     return nil
 }
@@ -80,7 +80,7 @@ by_id :: proc(start: ^Element, id: string) -> ^Element {
 by_attr :: proc(start: ^Element, key: string, value: string) -> Elements {
     buffer: Elements
     for child in start.children {
-        if child.attrs[key] == value do append_elem(&buffer, child) 
+        if child.attrs[key] == value { append_elem(&buffer, child)  }
         cb := by_attr(child, key, value) // child buffer
         append_elems(&buffer, ..cb[:])
         delete(cb)
@@ -95,7 +95,7 @@ by_class :: proc(start: ^Element, class: string) -> Elements {
 by_tag :: proc(start: ^Element, tag: string) -> Elements {
     buffer: Elements
     for child in start.children {
-        if eq(child.type, tag) do append_elem(&buffer, child) 
+        if eq(child.type, tag) { append_elem(&buffer, child)  }
         cb := by_tag(child, tag) // child buffer
         append_elems(&buffer, ..cb[:])
         delete(cb)
@@ -116,10 +116,9 @@ for_all_children :: proc(elem: ^Element, callback: proc(item: TextOrElement, res
     iter := bits.make_iterator(&elem.ordering)
     for {
         is_text, index, ok := bits.iterate_by_all(&iter)
-        if !ok do break
+        if !ok { break }
 
-        if is_text do callback(elem.text[text], text)
-        else do       callback(elem.children[child], child)
+        if is_text { callback(elem.text[text], text) }
+        else {       callback(elem.children[child], child) }
     }
 }
-
