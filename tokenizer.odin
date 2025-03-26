@@ -73,7 +73,7 @@ tokenize :: proc(html: string, alloc := context.temp_allocator) -> [] string {
                 if is_ws_rune(r2) { continue }
                 skip = c - 1
                 // (  optimization  )
-                if j != 1 || r != ' ' { append(&tokens, token[:j])     }
+                if j != 1 || r != ' ' { append(&tokens, token[:j]) }
                 break
             }
 
@@ -112,7 +112,7 @@ find_end_of_script :: proc(text: string) -> (int, int) {
             defer c += 1
                  if escaped   { escaped = false }
             else if r == '\\' { escaped = true }
-            else if r == b    { return c + skip  }
+            else if r == b    { return c + skip }
         }
         return len(a) - 1 + skip
     }
@@ -132,12 +132,12 @@ find_end_of_script :: proc(text: string) -> (int, int) {
 
 		case starts_with(t, "//"):
 			_, c2 := index(t, '\n')
-			if skip == -1 { break  }
+			if skip == -1 { break }
 			skip += c2
 
 		case starts_with(t, "/*"):
 			_, c2 := index(t, "*/")
-			if c2 == -1 { break  }
+			if c2 == -1 { break }
 			skip += c2 + 1
 
 		case starts_with(t, "</s"): return i, c // should be enough... for </script> and </style>

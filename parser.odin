@@ -23,7 +23,7 @@ next :: proc(o := 0) -> Token {
 
 @(private="file")
 peek :: proc(o := 0) -> Token {
-    if current + o < len(tokens) { return tokens[current + o]  }
+    if current + o < len(tokens) { return tokens[current + o] }
     return { }
 }
 
@@ -151,7 +151,7 @@ parse_elem :: proc(pre := false) -> ^Element {//{{{
                     return elem
 
                 case:
-                    if peek().type == .ELEMENT_END { next()   }
+                    if peek().type == .ELEMENT_END { next() }
                     else { break inner_for }
                 }
             }
@@ -218,10 +218,10 @@ dbg_fmt_tags :: proc(element: ^Element, level := 0) -> string {//{{{
 // print_parser :: proc(element: ^Element, level := 0) {
 //     I := "                                                                                                                                "
 //     print :: proc(strs: ..string, end := "\n") {
-//         for s in strs do pstr(s)
+//         for s in strs { pstr(s) }
 //     }
 //     print_attrs :: proc(e: ^Element) {
-//         for k, v in e.attrs do print(k, "=", v, " ")
+//         for k, v in e.attrs { print(k, "=", v, " ") }
 //     }
 //     print("<", element.type, " ")
 //     print_attrs(element)
@@ -230,9 +230,9 @@ dbg_fmt_tags :: proc(element: ^Element, level := 0) -> string {//{{{
 //     iter := bits.make_iterator(&element.ordering)
 //     for {
 //         is_text, index, ok := bits.iterate_by_all(&iter)
-//         if !ok do break
+//         if !ok { break }
 //         if is_text {
-//             if element.type != "pre" do pstr(I[:level+1])
+//             if element.type != "pre" { pstr(I[:level+1]) }
 //             pstr(element.text[text])
 //             text += 1
 //         } else {

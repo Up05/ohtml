@@ -85,7 +85,7 @@ lex :: proc(raw_tokens: [] string, alloc := context.temp_allocator) -> [] Token 
 find_nows :: proc(raw_tokens: [] string, origin: int, velocity: int) -> string {
     result := ""
     for i := origin + velocity; i >= 0 && i < len(raw_tokens); i += velocity {
-        if !is_ws(raw_tokens[i]) { return raw_tokens[i]  }
+        if !is_ws(raw_tokens[i]) { return raw_tokens[i] }
     }
     return result
 }

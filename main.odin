@@ -80,7 +80,7 @@ by_id :: proc(start: ^Element, id: string) -> ^Element {
 by_attr :: proc(start: ^Element, key: string, value: string) -> Elements {
     buffer: Elements
     for child in start.children {
-        if child.attrs[key] == value { append_elem(&buffer, child)  }
+        if child.attrs[key] == value { append_elem(&buffer, child) }
         cb := by_attr(child, key, value) // child buffer
         append_elems(&buffer, ..cb[:])
         delete(cb)
@@ -95,7 +95,7 @@ by_class :: proc(start: ^Element, class: string) -> Elements {
 by_tag :: proc(start: ^Element, tag: string) -> Elements {
     buffer: Elements
     for child in start.children {
-        if eq(child.type, tag) { append_elem(&buffer, child)  }
+        if eq(child.type, tag) { append_elem(&buffer, child) }
         cb := by_tag(child, tag) // child buffer
         append_elems(&buffer, ..cb[:])
         delete(cb)

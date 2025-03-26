@@ -51,7 +51,7 @@ index_rune :: proc(haystack: string, needle: rune, offset := 0) -> (int, int) {
     return -1, -1
 }
 
-index :: proc {  index_str, index_rune  }
+index :: proc { index_str, index_rune }
 
 // partially stolen from the std lib
 rune_size :: proc(r: rune) -> int {
