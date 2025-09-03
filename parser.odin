@@ -10,27 +10,28 @@ Element :: struct {
     children:   [dynamic] ^Element,     // All children elements...
     ordering:   bits.Bit_Array,         // 0 is for Element, 1 is for Text
 }
-
-@(private="file") tokens:  [] Token
-@(private="file") current: int
+Context :: struct {
+    tokens:  []Token,
+    current: int
+}
 
 @(private="file")
-next :: proc(o := 0) -> Token {
+next :: proc(using ctx: ^Context, o := 0) -> Token {
+    //current = 0
     defer current += 1 + o
     if current + o < len(tokens) { return tokens[current + o] }
     return { }
 }
 
 @(private="file")
-peek :: proc(o := 0) -> Token {
+peek :: proc(using ctx: ^Context,o := 0) -> Token {
     if current + o < len(tokens) { return tokens[current + o] }
     return { }
 }
 
 parse :: proc(html: string, intermediate_allocator := context.temp_allocator) -> ^Element {
-    tokens = {}
-    current = 0
-
+    ctx := Context {}
+    using ctx
     raw_tokens := tokenize(html, intermediate_allocator)
     lexed_tokens := lex(raw_tokens, intermediate_allocator)
 
@@ -42,20 +43,20 @@ parse :: proc(html: string, intermediate_allocator := context.temp_allocator) ->
 
     // Kind of, copied from parse_elem, tbh i cba
     for current < len(tokens) {
-        if peek().type == .TEXT {
-            append(&elem.text, peek().text)
+        if peek(&ctx).type == .TEXT {
+            append(&elem.text, peek(&ctx).text)
             bits.set(&elem.ordering, len(elem.ordering.bits), true)
-            next()
+            next(&ctx)
 
-        } else if peek().type == .ELEMENT {
-            child := parse_elem()
+        } else if peek(&ctx).type == .ELEMENT {
+            child := parse_elem(&ctx)
             if child == nil { continue }
             append(&elem.children, child)
             child.parent = elem
             bits.set(&elem.ordering, len(elem.ordering.bits), false)
 
-        } else if peek().type == .WHITESPACE {
-            next()
+        } else if peek(&ctx).type == .WHITESPACE {
+            next(&ctx)
 
         } else { break }
     }
@@ -94,71 +95,71 @@ BLOCK_TAGS : [] string : {
 
 KEEP_WHITESPACE : [] string : { "pre", "plaintext", "title", "textarea" }
 
-parse_elem :: proc(pre := false) -> ^Element {//{{{
-    if peek().type != .ELEMENT { return nil }
+parse_elem :: proc(using ctx: ^Context, pre := false) -> ^Element {
+    if peek(ctx).type != .ELEMENT { return nil }
 
     elem := new(Element)
-    elem.type = next().text
+    elem.type = next(ctx).text
 
     pre := pre || any_of(elem.type, ..KEEP_WHITESPACE)
     is_inline := any_of(elem.type, ..INLINE_TAGS)
 
     for current < len(tokens) {
-        #partial switch peek().type {
+        #partial switch peek(ctx).type {
         case .A_KEY:
-            key := to_lower_copy(peek().text) // TODO, This sucks ass.
-            if peek(1).type == .A_VALUE {
-                elem.attrs[key] = next(1).text
+            key := to_lower_copy(peek(ctx).text) // TODO, This sucks ass.
+            if peek(ctx, 1).type == .A_VALUE {
+                elem.attrs[key] = next(ctx, 1).text
             } else {
                 elem.attrs[key] = "true"
-                next()
+                next(ctx)
             }
         case .TAG_END:
-            next()
+            next(ctx)
 
             if any_of(elem.type, ..VOID_TAGS) {
                 return elem
             }
 
-            has_closing_tag := is_closed(elem.type)
+            has_closing_tag := is_closed(ctx, elem.type)
             inner_for: for current < len(tokens) {
 
                 switch {
-                case peek().type == .TEXT:
-                    append(&elem.text, peek().text)
+                case peek(ctx).type == .TEXT:
+                    append(&elem.text, peek(ctx).text)
                     bits.set(&elem.ordering, len(elem.ordering.bits))
-                    next()
+                    next(ctx)
 
-                case peek().type == .ELEMENT:
-                    if any_of(peek().text, ..BLOCK_TAGS) {
-                        if !has_closing_tag && eq(peek().text, elem.type) { return elem }
+                case peek(ctx).type == .ELEMENT:
+                    if any_of(peek(ctx).text, ..BLOCK_TAGS) {
+                        if !has_closing_tag && eq(peek(ctx).text, elem.type) { return elem }
                         if is_inline { return elem }
                     }
 
-                    child := parse_elem(pre)
+                    child := parse_elem(ctx, pre)
                     if child == nil { continue }
                     append(&elem.children, child)
                     child.parent = elem
                     bits.set(&elem.ordering, len(elem.ordering.bits), false)
 
-                case peek().type == .WHITESPACE:
-                    txt := peek().text if pre else trim_ws(peek().text)
-                    append(&elem.text, peek().text)
+                case peek(ctx).type == .WHITESPACE:
+                    txt := peek(ctx).text if pre else trim_ws(peek(ctx).text)
+                    append(&elem.text, peek(ctx).text)
                     bits.set(&elem.ordering, len(elem.ordering.bits), true)
-                    next()
+                    next(ctx)
 
-                case peek().type == .ELEMENT_END && ends_with(peek().text, elem.type):
+                case peek(ctx).type == .ELEMENT_END && ends_with(peek(ctx).text, elem.type):
                     return elem
 
                 case:
-                    if peek().type == .ELEMENT_END { next() }
+                    if peek(ctx).type == .ELEMENT_END { next(ctx) }
                     else { break inner_for }
                 }
             }
         case .ELEMENT_END:
-            if !ends_with(peek().text, elem.type) && peek().text != "/" { break }
-            if peek().type == .ELEMENT_END { next() }
-            if peek().type == .TAG_END { next() }
+            if !ends_with(peek(ctx).text, elem.type) && peek(ctx).text != "/" { break }
+            if peek(ctx).type == .ELEMENT_END { next(ctx) }
+            if peek(ctx).type == .TAG_END { next(ctx) }
             return elem
 
         case: current += 1
@@ -169,7 +170,7 @@ parse_elem :: proc(pre := false) -> ^Element {//{{{
 }//}}}
 
 // obviously, there can be <br> anywhere...
-is_closed :: proc(tag: string) -> bool {//{{{
+is_closed :: proc(using ctx: ^Context, tag: string) -> bool {//{{{
     level := 0
     for t in tokens[current:] {
         if t.type == .ELEMENT && eq(t.text, tag) {
