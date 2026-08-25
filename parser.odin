@@ -16,33 +16,31 @@ Context :: struct {
 }
 
 @(private="file")
-next :: proc(using ctx: ^Context, o := 0) -> Token {
-    //current = 0
-    defer current += 1 + o
-    if current + o < len(tokens) { return tokens[current + o] }
+next :: proc(ctx: ^Context, o := 0) -> Token {
+    defer ctx.current += 1 + o
+    if ctx.current + o < len(ctx.tokens) { return ctx.tokens[ctx.current + o] }
     return { }
 }
 
 @(private="file")
-peek :: proc(using ctx: ^Context,o := 0) -> Token {
-    if current + o < len(tokens) { return tokens[current + o] }
+peek :: proc(ctx: ^Context, o := 0) -> Token {
+    if ctx.current + o < len(ctx.tokens) { return ctx.tokens[ctx.current + o] }
     return { }
 }
 
 parse :: proc(html: string, intermediate_allocator := context.temp_allocator) -> ^Element {
     ctx := Context {}
-    using ctx
     raw_tokens := tokenize(html, intermediate_allocator)
     lexed_tokens := lex(raw_tokens, intermediate_allocator)
 
     defer free_all(intermediate_allocator)
 
-    tokens = lexed_tokens
+    ctx.tokens = lexed_tokens
     elem := new(Element)
     elem.type = "root"
 
     // Kind of, copied from parse_elem, tbh i cba
-    for current < len(tokens) {
+    for ctx.current < len(ctx.tokens) {
         if peek(&ctx).type == .TEXT {
             append(&elem.text, peek(&ctx).text)
             bits.set(&elem.ordering, len(elem.ordering.bits), true)
@@ -95,7 +93,7 @@ BLOCK_TAGS : [] string : {
 
 KEEP_WHITESPACE : [] string : { "pre", "plaintext", "title", "textarea" }
 
-parse_elem :: proc(using ctx: ^Context, pre := false) -> ^Element {
+parse_elem :: proc(ctx: ^Context, pre := false) -> ^Element {
     if peek(ctx).type != .ELEMENT { return nil }
 
     elem := new(Element)
@@ -104,7 +102,7 @@ parse_elem :: proc(using ctx: ^Context, pre := false) -> ^Element {
     pre := pre || any_of(elem.type, ..KEEP_WHITESPACE)
     is_inline := any_of(elem.type, ..INLINE_TAGS)
 
-    for current < len(tokens) {
+    for ctx.current < len(ctx.tokens) {
         #partial switch peek(ctx).type {
         case .A_KEY:
             key := to_lower_copy(peek(ctx).text) // TODO, This sucks ass.
@@ -122,7 +120,7 @@ parse_elem :: proc(using ctx: ^Context, pre := false) -> ^Element {
             }
 
             has_closing_tag := is_closed(ctx, elem.type)
-            inner_for: for current < len(tokens) {
+            inner_for: for ctx.current < len(ctx.tokens) {
 
                 switch {
                 case peek(ctx).type == .TEXT:
@@ -162,7 +160,7 @@ parse_elem :: proc(using ctx: ^Context, pre := false) -> ^Element {
             if peek(ctx).type == .TAG_END { next(ctx) }
             return elem
 
-        case: current += 1
+        case: ctx.current += 1
         } // switch
     } // for
 
@@ -170,9 +168,9 @@ parse_elem :: proc(using ctx: ^Context, pre := false) -> ^Element {
 }//}}}
 
 // obviously, there can be <br> anywhere...
-is_closed :: proc(using ctx: ^Context, tag: string) -> bool {//{{{
+is_closed :: proc(ctx: ^Context, tag: string) -> bool {//{{{
     level := 0
-    for t in tokens[current:] {
+    for t in ctx.tokens[ctx.current:] {
         if t.type == .ELEMENT && eq(t.text, tag) {
            level += 1
         } else if t.type == .ELEMENT_END && ends_with(t.text, tag) {
